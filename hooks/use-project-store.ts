@@ -11,6 +11,8 @@ import type {
   EditorMode,
   TechniqueType,
   TechniqueOutput,
+  POI,
+  POICategory,
 } from "@/lib/types"
 import { ROUTE_COLORS, ALL_TECHNIQUE_TYPES } from "@/lib/types"
 
@@ -422,6 +424,7 @@ export function useProjectStore() {
       segmentId: string,
       data: {
         path: LatLng[]
+        elevation: number[]
         intersections: import("@/lib/types").Intersection[]
         legDistances: number[]
         legBearings: number[]

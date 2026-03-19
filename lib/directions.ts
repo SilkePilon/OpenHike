@@ -24,14 +24,20 @@ function overlapCount(
   return count
 }
 
-/** Convert GeoJSON [lng, lat] coordinates to LatLng[] */
+/** Convert GeoJSON coordinates to LatLng[] (ignores z-coordinate) */
 function geoJsonToPath(coords: number[][]): LatLng[] {
   return coords.map(([lng, lat]) => ({ lat, lng }))
+}
+
+/** Extract elevation from 3D GeoJSON coordinates ([lng, lat, ele]) */
+function geoJsonToElevation(coords: number[][]): number[] {
+  return coords.map((c) => (c.length >= 3 ? c[2] : 0))
 }
 
 // ── Fetch directions for a single segment ────────────────
 export interface SegmentDirectionsResult {
   path: LatLng[]
+  elevation: number[]
   intersections: Intersection[]
   legDistances: number[]
   legBearings: number[]
@@ -84,6 +90,7 @@ export async function fetchSegmentDirections(
 
   const feature = data.features[bestIdx]
   const path = geoJsonToPath(feature.geometry.coordinates)
+  const elevation = geoJsonToElevation(feature.geometry.coordinates)
   const summary = feature.properties.summary
 
   // Extract basic intersections from ORS steps (used as fallback)
@@ -121,6 +128,7 @@ export async function fetchSegmentDirections(
 
   return {
     path,
+    elevation,
     intersections: enriched.intersections,
     legDistances: enriched.legDistances,
     legBearings: enriched.legBearings,

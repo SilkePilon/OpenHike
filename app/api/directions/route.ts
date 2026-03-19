@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
         },
         instructions: true,
         geometry: true,
+        elevation: true,
       }),
     }
   )
