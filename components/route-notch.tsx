@@ -14,6 +14,9 @@ import {
   Trash2Icon,
   DownloadIcon,
   MapPinIcon,
+  RouteIcon,
+  ArrowLeftRightIcon,
+  Repeat2Icon,
 } from "lucide-react"
 import type { ProjectStore } from "@/hooks/use-project-store"
 import { RouteConfigDialog } from "@/components/route-config-dialog"
@@ -98,6 +101,81 @@ export function RouteNotch({ store }: RouteNotchProps) {
             <TooltipContent side="bottom">
               {isPlacingPois ? "Stop POIs plaatsen" : "POI plaatsen"}
             </TooltipContent>
+          </Tooltip>
+
+          {/* Separator */}
+          <div className="mx-1 h-5 w-px bg-border" />
+
+          {/* Snap / Straight toggle */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant={(route.routingMode ?? "snap") === "straight" ? "default" : "ghost"}
+                className="size-8"
+                onClick={() => {
+                  const next = (route.routingMode ?? "snap") === "snap" ? "straight" : "snap"
+                  store.setRoutingMode(next)
+                  toast.info(
+                    next === "straight"
+                      ? "Rechte lijn modus (hemelsbreed)"
+                      : "Wegen-modus (wandelpad)"
+                  )
+                }}
+              >
+                <RouteIcon />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              {(route.routingMode ?? "snap") === "snap"
+                ? "Schakel naar rechte lijn"
+                : "Schakel naar wandelpad"}
+            </TooltipContent>
+          </Tooltip>
+
+          {/* Reverse route */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="size-8"
+                onClick={() => {
+                  store.reverseRoute()
+                  toast.info("Route omgekeerd")
+                }}
+                disabled={route.waypoints.length < 2}
+              >
+                <ArrowLeftRightIcon />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Route omkeren</TooltipContent>
+          </Tooltip>
+
+          {/* Close loop */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="size-8"
+                onClick={() => {
+                  store.closeLoop()
+                  toast.info("Rondje gesloten")
+                }}
+                disabled={
+                  route.waypoints.length < 3 ||
+                  route.segments.some(
+                    (s) =>
+                      s.fromIndex === route.waypoints.length - 1 &&
+                      s.toIndex === 0
+                  )
+                }
+              >
+                <Repeat2Icon />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Rondje sluiten</TooltipContent>
           </Tooltip>
 
           {/* Delete route */}
