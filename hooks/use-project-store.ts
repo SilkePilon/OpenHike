@@ -422,6 +422,7 @@ export function useProjectStore() {
       segmentId: string,
       data: {
         path: LatLng[]
+        elevation: number[]
         intersections: import("@/lib/types").Intersection[]
         legDistances: number[]
         legBearings: number[]

@@ -5,6 +5,7 @@ import dynamic from "next/dynamic"
 import type L from "leaflet"
 import { MapControls } from "@/components/map-controls"
 import { RouteNotch } from "@/components/route-notch"
+import { ElevationProfile } from "@/components/elevation-profile"
 import type { ProjectStore } from "@/hooks/use-project-store"
 import { fetchSegmentDirections } from "@/lib/directions"
 import { Loader2Icon } from "lucide-react"
@@ -88,6 +89,13 @@ export function RouteMap({ store }: RouteMapProps) {
 
       <MapControls mapRef={mapRef} />
       <RouteNotch store={store} />
+
+      {/* Elevation profile panel */}
+      {activeRoute && activeRoute.segments.some((s) => s.elevation && s.elevation.length > 0) && (
+        <div className="absolute bottom-4 left-1/2 z-10 w-full max-w-md -translate-x-1/2 rounded-xl border bg-background/95 px-4 py-3 shadow-lg backdrop-blur">
+          <ElevationProfile route={activeRoute} />
+        </div>
+      )}
 
       {store.isLoadingDirections && (
         <div className="absolute top-4 left-1/2 z-10 -translate-x-1/2">

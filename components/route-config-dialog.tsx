@@ -43,6 +43,7 @@ import {
 import { exportRouteAsZip } from "@/lib/export"
 import { generateTechniques } from "@/lib/techniques"
 import { RoutePreview } from "@/components/route-preview"
+import { ElevationProfile } from "@/components/elevation-profile"
 import { formatDuration, formatDistance } from "@/lib/format"
 
 const STEPS = [
@@ -108,6 +109,9 @@ export function RouteConfigDialog({
             <RoutePreview route={route} width={480} height={100} />
           </div>
         )}
+
+        {/* Elevation profile */}
+        <ElevationProfile route={route} />
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <div className="flex items-center gap-1.5">
             <FootprintsIcon className="size-3.5" />

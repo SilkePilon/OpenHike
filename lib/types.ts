@@ -41,6 +41,8 @@ export interface Segment {
   technique: TechniqueType
   description: string
   path: LatLng[]
+  /** Elevation (meters) at each path point — same length as `path`, undefined when elevation unavailable */
+  elevation?: number[]
   intersections: Intersection[]
   legDistances: number[]
   legBearings: number[]
