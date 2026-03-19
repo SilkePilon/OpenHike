@@ -31,6 +31,8 @@ import {
   ClockIcon,
   SparklesIcon,
   Loader2Icon,
+  MapIcon,
+  FileJsonIcon,
 } from "lucide-react"
 import type { ProjectStore } from "@/hooks/use-project-store"
 import type { Route } from "@/lib/types"
@@ -40,7 +42,7 @@ import {
   TECHNIQUE_COLORS,
   ALL_TECHNIQUE_TYPES,
 } from "@/lib/types"
-import { exportRouteAsZip } from "@/lib/export"
+import { exportRouteAsZip, exportRouteAsGpx, exportRouteAsGeoJson } from "@/lib/export"
 import { generateTechniques } from "@/lib/techniques"
 import { RoutePreview } from "@/components/route-preview"
 import { formatDuration, formatDistance } from "@/lib/format"
@@ -319,7 +321,7 @@ function ExportStep({
         Genereer technieken
       </Button>
 
-      {/* Download */}
+      {/* Download technique ZIP */}
       {route.techniqueOutputs.length > 0 && (
         <>
           <p className="text-sm text-muted-foreground">
@@ -334,6 +336,28 @@ function ExportStep({
             Download als ZIP
           </Button>
         </>
+      )}
+
+      {/* Route export formats */}
+      {route.segments.length > 0 && route.segments.some((s) => s.path.length > 0) && (
+        <div className="flex w-full max-w-xs gap-2">
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={() => exportRouteAsGpx(route)}
+          >
+            <MapIcon className="size-4" />
+            GPX
+          </Button>
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={() => exportRouteAsGeoJson(route)}
+          >
+            <FileJsonIcon className="size-4" />
+            GeoJSON
+          </Button>
+        </div>
       )}
 
       {!canGenerate && route.segments.length > 0 && (
