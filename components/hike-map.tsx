@@ -6,6 +6,7 @@ import type L from "leaflet"
 import { MapControls } from "@/components/map-controls"
 import { RouteNotch } from "@/components/route-notch"
 import { ElevationProfile } from "@/components/elevation-profile"
+import { MapSearch } from "@/components/map-search"
 import type { ProjectStore } from "@/hooks/use-project-store"
 import { fetchSegmentDirections } from "@/lib/directions"
 import { haversine, bearing } from "@/lib/geo"
@@ -109,6 +110,7 @@ export function RouteMap({ store }: RouteMapProps) {
     <>
       <LeafletMap store={store} mapRef={mapRef} />
 
+      <MapSearch mapRef={mapRef} store={store} />
       <MapControls mapRef={mapRef} />
       <RouteNotch store={store} />
 
