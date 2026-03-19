@@ -597,13 +597,18 @@ export function useProjectStore() {
 
   // ── POI operations ──────────────────────────────────────
   const addPoi = useCallback(
-    (position: LatLng, category: POICategory, name: string) => {
-      if (!activeRouteId) return
+    (
+      position: LatLng,
+      category: POICategory,
+      name: string
+    ): string | undefined => {
+      if (!activeRouteId) return undefined
       const poi: POI = { id: uid(), position, category, name }
       updateRoute(activeRouteId, (r) => ({
         ...r,
         pois: [...(r.pois ?? []), poi],
       }))
+      return poi.id
     },
     [activeRouteId, updateRoute]
   )
@@ -611,7 +616,7 @@ export function useProjectStore() {
   const updatePoi = useCallback(
     (
       poiId: string,
-      updates: Partial<Pick<POI, "name" | "note" | "category">>
+      updates: Partial<Pick<POI, "name" | "note" | "category" | "icon">>
     ) => {
       if (!activeRouteId) return
       updateRoute(activeRouteId, (r) => ({
