@@ -30,18 +30,15 @@ const generators: Record<TechniqueType, (segment: Segment) => string> = {
 
 export function generateTechniques(route: Route): TechniqueOutput[] {
   return route.segments.map((seg, i) => {
-    console.log(
-      `[Technique] Segment ${i} (${seg.technique}):`,
-      {
-        intersections: seg.intersections.length,
-        sideStreetCounts: seg.intersections.map(
-          (ix, j) => `#${j}: ${ix.sideStreets.length} ss`
-        ),
-        legBearings: seg.legBearings,
-        legDistances: seg.legDistances,
-        pathLength: seg.path.length,
-      }
-    )
+    console.log(`[Technique] Segment ${i} (${seg.technique}):`, {
+      intersections: seg.intersections.length,
+      sideStreetCounts: seg.intersections.map(
+        (ix, j) => `#${j}: ${ix.sideStreets.length} ss`
+      ),
+      legBearings: seg.legBearings,
+      legDistances: seg.legDistances,
+      pathLength: seg.path.length,
+    })
     return {
       type: seg.technique,
       label: TECHNIQUE_META[seg.technique].label,
