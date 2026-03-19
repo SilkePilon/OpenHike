@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { Toaster } from "@/components/ui/sonner"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
+import { PwaRegister } from "@/components/pwa-register"
 import { cn } from "@/lib/utils"
 
 const fontSans = Geist({
@@ -17,9 +18,18 @@ const fontMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "Routetechnieken — Scouting Route Generator",
+  title: "OpenHike — Route Planner",
   description:
-    "Genereer automatisch routetechnieken voor scouting wandeltochten.",
+    "Plan hiking routes with scouting techniques — works offline.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "OpenHike",
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+  },
 }
 
 export default function RootLayout({
@@ -39,6 +49,8 @@ export default function RootLayout({
       )}
     >
       <head>
+        <meta name="theme-color" content="#2563eb" />
+        <link rel="apple-touch-icon" href="/icons/icon-192.svg" />
         <link rel="dns-prefetch" href="https://a.basemaps.cartocdn.com" />
         <link rel="dns-prefetch" href="https://b.basemaps.cartocdn.com" />
         <link rel="dns-prefetch" href="https://c.basemaps.cartocdn.com" />
@@ -58,6 +70,7 @@ export default function RootLayout({
         <ThemeProvider>
           <TooltipProvider>{children}</TooltipProvider>
           <Toaster position="bottom-right" />
+          <PwaRegister />
         </ThemeProvider>
       </body>
     </html>
