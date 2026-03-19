@@ -22,7 +22,9 @@ self.addEventListener("activate", (e) => {
     caches
       .keys()
       .then((keys) =>
-        Promise.all(keys.filter((k) => !allowed.has(k)).map((k) => caches.delete(k)))
+        Promise.all(
+          keys.filter((k) => !allowed.has(k)).map((k) => caches.delete(k))
+        )
       )
       .then(() => self.clients.claim())
   )
@@ -80,7 +82,9 @@ self.addEventListener("fetch", (e) => {
   // App navigation → network-first with app shell fallback
   if (e.request.mode === "navigate") {
     e.respondWith(
-      fetch(e.request).catch(() => caches.match("/").then((r) => r || fetch(e.request)))
+      fetch(e.request).catch(() =>
+        caches.match("/").then((r) => r || fetch(e.request))
+      )
     )
     return
   }

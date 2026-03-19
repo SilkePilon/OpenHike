@@ -570,7 +570,12 @@ export function useProjectStore() {
           duration: 0,
         })
       }
-      return { ...r, waypoints: reversed, segments: newSegments, techniqueOutputs: [] }
+      return {
+        ...r,
+        waypoints: reversed,
+        segments: newSegments,
+        techniqueOutputs: [],
+      }
     })
   }, [activeRouteId, updateRoute])
 
@@ -595,17 +600,25 @@ export function useProjectStore() {
     (position: LatLng, category: POICategory, name: string) => {
       if (!activeRouteId) return
       const poi: POI = { id: uid(), position, category, name }
-      updateRoute(activeRouteId, (r) => ({ ...r, pois: [...(r.pois ?? []), poi] }))
+      updateRoute(activeRouteId, (r) => ({
+        ...r,
+        pois: [...(r.pois ?? []), poi],
+      }))
     },
     [activeRouteId, updateRoute]
   )
 
   const updatePoi = useCallback(
-    (poiId: string, updates: Partial<Pick<POI, "name" | "note" | "category">>) => {
+    (
+      poiId: string,
+      updates: Partial<Pick<POI, "name" | "note" | "category">>
+    ) => {
       if (!activeRouteId) return
       updateRoute(activeRouteId, (r) => ({
         ...r,
-        pois: (r.pois ?? []).map((p) => (p.id === poiId ? { ...p, ...updates } : p)),
+        pois: (r.pois ?? []).map((p) =>
+          p.id === poiId ? { ...p, ...updates } : p
+        ),
       }))
     },
     [activeRouteId, updateRoute]
@@ -627,7 +640,9 @@ export function useProjectStore() {
       if (!activeRouteId) return
       updateRoute(activeRouteId, (r) => ({
         ...r,
-        pois: (r.pois ?? []).map((p) => (p.id === poiId ? { ...p, position } : p)),
+        pois: (r.pois ?? []).map((p) =>
+          p.id === poiId ? { ...p, position } : p
+        ),
       }))
     },
     [activeRouteId, updateRoute]

@@ -10,6 +10,7 @@ import { MapSearch } from "@/components/map-search"
 import type { ProjectStore } from "@/hooks/use-project-store"
 import { fetchSegmentDirections } from "@/lib/directions"
 import { haversine, bearing } from "@/lib/geo"
+import { fetchElevations, interpolatePoints } from "@/lib/elevation"
 import { Loader2Icon } from "lucide-react"
 import { toast } from "sonner"
 
@@ -52,13 +53,21 @@ export function RouteMap({ store }: RouteMapProps) {
         if (!from || !to) continue
 
         if (routingMode === "straight") {
-          // Straight line — no API call
+          // Straight line — fetch real elevation along the line
           const dist = haversine(from.lat, from.lng, to.lat, to.lng)
           const brg = bearing(from.lat, from.lng, to.lat, to.lng)
+          const numPts = Math.max(2, Math.min(50, Math.ceil(dist / 50)))
+          const interpPts = interpolatePoints(from, to, numPts)
+          let elevation: number[]
+          try {
+            elevation = await fetchElevations(interpPts)
+          } catch {
+            elevation = interpPts.map(() => 0)
+          }
           if (!cancelled) {
             store.setSegmentDirections(routeId, seg.id, {
-              path: [from, to],
-              elevation: [0, 0],
+              path: interpPts,
+              elevation,
               intersections: [],
               legDistances: [dist],
               legBearings: [brg],
@@ -115,11 +124,14 @@ export function RouteMap({ store }: RouteMapProps) {
       <RouteNotch store={store} />
 
       {/* Elevation profile panel */}
-      {activeRoute && activeRoute.segments.some((s) => s.elevation && s.elevation.length > 0) && (
-        <div className="absolute bottom-4 left-1/2 z-10 w-full max-w-md -translate-x-1/2 rounded-xl border bg-background/95 px-4 py-3 shadow-lg backdrop-blur">
-          <ElevationProfile route={activeRoute} />
-        </div>
-      )}
+      {activeRoute &&
+        activeRoute.segments.some(
+          (s) => s.elevation && s.elevation.length > 0
+        ) && (
+          <div className="absolute bottom-4 left-1/2 z-10 w-full max-w-md -translate-x-1/2 rounded-xl border bg-background/95 px-4 py-3 shadow-lg backdrop-blur">
+            <ElevationProfile route={activeRoute} />
+          </div>
+        )}
 
       {store.isLoadingDirections && (
         <div className="absolute top-4 left-1/2 z-10 -translate-x-1/2">

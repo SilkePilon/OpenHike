@@ -10,11 +10,9 @@ export function PwaRegister() {
   useEffect(() => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) return
 
-    navigator.serviceWorker
-      .register("/tile-sw.js")
-      .catch(() => {
-        // SW registration failed — ignore (e.g. localhost without HTTPS)
-      })
+    navigator.serviceWorker.register("/tile-sw.js").catch(() => {
+      // SW registration failed — ignore (e.g. localhost without HTTPS)
+    })
   }, [])
 
   return null

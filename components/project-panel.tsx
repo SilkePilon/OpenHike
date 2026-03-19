@@ -412,9 +412,12 @@ export function ProjectPanel({ store }: ProjectPanelProps) {
                                   return
                                 }
                                 store.importRoute(imported)
-                                toast.success(`Route "${imported.name}" geïmporteerd`, {
-                                  description: `${imported.waypoints.length} punten geladen.`,
-                                })
+                                toast.success(
+                                  `Route "${imported.name}" geïmporteerd`,
+                                  {
+                                    description: `${imported.waypoints.length} punten geladen.`,
+                                  }
+                                )
                               } catch {
                                 toast.error("Kon bestand niet importeren")
                               }
@@ -425,7 +428,9 @@ export function ProjectPanel({ store }: ProjectPanelProps) {
                           <UploadIcon className="size-3.5" />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent side="right">Importeer GPX/GeoJSON</TooltipContent>
+                      <TooltipContent side="right">
+                        Importeer GPX/GeoJSON
+                      </TooltipContent>
                     </Tooltip>
                   </div>
                 </div>

@@ -87,17 +87,17 @@ export function MapSearch({ mapRef, store }: MapSearchProps) {
   return (
     <div ref={containerRef} className="absolute top-3 left-3 z-10 w-72">
       <div className="relative">
-        <SearchIcon className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+        <SearchIcon className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
         <Input
           type="text"
           placeholder="Zoek plaats, adres of coördinaten..."
-          className="pl-9 pr-8 bg-background/95 backdrop-blur shadow-lg"
+          className="bg-background/95 pr-8 pl-9 shadow-lg backdrop-blur"
           value={query}
           onChange={(e) => handleChange(e.target.value)}
           onFocus={() => results.length > 0 && setOpen(true)}
         />
         {loading && (
-          <Loader2Icon className="absolute right-2.5 top-2.5 size-4 animate-spin text-muted-foreground" />
+          <Loader2Icon className="absolute top-2.5 right-2.5 size-4 animate-spin text-muted-foreground" />
         )}
       </div>
 
@@ -106,7 +106,7 @@ export function MapSearch({ mapRef, store }: MapSearchProps) {
           {results.map((r, i) => (
             <button
               key={i}
-              className="flex w-full items-start gap-2 px-3 py-2 text-left text-sm hover:bg-accent transition-colors"
+              className="flex w-full items-start gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-accent"
               onClick={() => handleSelect(r)}
             >
               <MapPinIcon className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />

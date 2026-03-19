@@ -42,7 +42,11 @@ import {
   TECHNIQUE_COLORS,
   ALL_TECHNIQUE_TYPES,
 } from "@/lib/types"
-import { exportRouteAsZip, exportRouteAsGpx, exportRouteAsGeoJson } from "@/lib/export"
+import {
+  exportRouteAsZip,
+  exportRouteAsGpx,
+  exportRouteAsGeoJson,
+} from "@/lib/export"
 import { generateTechniques } from "@/lib/techniques"
 import { RoutePreview } from "@/components/route-preview"
 import { ElevationProfile } from "@/components/elevation-profile"
@@ -343,26 +347,27 @@ function ExportStep({
       )}
 
       {/* Route export formats */}
-      {route.segments.length > 0 && route.segments.some((s) => s.path.length > 0) && (
-        <div className="flex w-full max-w-xs gap-2">
-          <Button
-            variant="outline"
-            className="flex-1"
-            onClick={() => exportRouteAsGpx(route)}
-          >
-            <MapIcon className="size-4" />
-            GPX
-          </Button>
-          <Button
-            variant="outline"
-            className="flex-1"
-            onClick={() => exportRouteAsGeoJson(route)}
-          >
-            <FileJsonIcon className="size-4" />
-            GeoJSON
-          </Button>
-        </div>
-      )}
+      {route.segments.length > 0 &&
+        route.segments.some((s) => s.path.length > 0) && (
+          <div className="flex w-full max-w-xs gap-2">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => exportRouteAsGpx(route)}
+            >
+              <MapIcon className="size-4" />
+              GPX
+            </Button>
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => exportRouteAsGeoJson(route)}
+            >
+              <FileJsonIcon className="size-4" />
+              GeoJSON
+            </Button>
+          </div>
+        )}
 
       {!canGenerate && route.segments.length > 0 && (
         <p className="max-w-xs text-center text-xs text-muted-foreground">
