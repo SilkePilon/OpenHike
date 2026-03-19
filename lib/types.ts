@@ -50,6 +50,8 @@ export interface Segment {
   duration: number
 }
 
+export type RoutingMode = "snap" | "straight"
+
 export interface Route {
   id: string
   name: string
@@ -60,6 +62,8 @@ export interface Route {
   /** Generated technique outputs (one per segment) */
   techniqueOutputs: TechniqueOutput[]
   color: string
+  /** Routing mode: snap to roads or straight lines between waypoints */
+  routingMode: RoutingMode
 }
 
 // ── POIs ─────────────────────────────────────────────────
