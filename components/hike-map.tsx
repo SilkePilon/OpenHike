@@ -8,6 +8,7 @@ import { RouteNotch } from "@/components/route-notch"
 import { ElevationProfile } from "@/components/elevation-profile"
 import type { ProjectStore } from "@/hooks/use-project-store"
 import { fetchSegmentDirections } from "@/lib/directions"
+import { haversine, bearing } from "@/lib/geo"
 import { Loader2Icon } from "lucide-react"
 import { toast } from "sonner"
 
@@ -41,11 +42,31 @@ export function RouteMap({ store }: RouteMapProps) {
     let cancelled = false
 
     async function fetchAll() {
+      const routingMode = activeRoute!.routingMode ?? "snap"
+
       for (const seg of pending) {
         if (cancelled) break
         const from = activeRoute!.waypoints[seg.fromIndex]?.position
         const to = activeRoute!.waypoints[seg.toIndex]?.position
         if (!from || !to) continue
+
+        if (routingMode === "straight") {
+          // Straight line — no API call
+          const dist = haversine(from.lat, from.lng, to.lat, to.lng)
+          const brg = bearing(from.lat, from.lng, to.lat, to.lng)
+          if (!cancelled) {
+            store.setSegmentDirections(routeId, seg.id, {
+              path: [from, to],
+              elevation: [0, 0],
+              intersections: [],
+              legDistances: [dist],
+              legBearings: [brg],
+              distance: dist,
+              duration: dist / 1.3, // ~4.7 km/h walking
+            })
+          }
+          continue
+        }
 
         const existingPaths = activeRoute!.segments
           .filter((s) => s.id !== seg.id && s.path.length > 0)
@@ -81,6 +102,7 @@ export function RouteMap({ store }: RouteMapProps) {
       .filter((s) => s.path.length === 0)
       .map((s) => s.id)
       .join(),
+    activeRoute?.routingMode,
   ])
 
   return (
