@@ -13,6 +13,7 @@ import type {
   TechniqueOutput,
   POI,
   POICategory,
+  RoutingMode,
 } from "@/lib/types"
 import { ROUTE_COLORS, ALL_TECHNIQUE_TYPES } from "@/lib/types"
 import type { ImportedRoute } from "@/lib/export"
@@ -130,8 +131,10 @@ export function useProjectStore() {
         name,
         waypoints: [],
         segments: [],
+        pois: [],
         techniqueOutputs: [],
         color: ROUTE_COLORS[colorIdx],
+        routingMode: "snap",
       }
       updateProject(activeProjectId, (p) => ({
         ...p,
@@ -174,8 +177,10 @@ export function useProjectStore() {
         name: imported.name,
         waypoints,
         segments,
+        pois: [],
         techniqueOutputs: [],
         color: ROUTE_COLORS[colorIdx],
+        routingMode: "snap",
       }
       updateProject(activeProjectId, (p) => ({
         ...p,
@@ -523,6 +528,111 @@ export function useProjectStore() {
     [updateRoute]
   )
 
+  // ── Route planning helpers ──────────────────────────────
+  const setRoutingMode = useCallback(
+    (mode: RoutingMode) => {
+      if (!activeRouteId) return
+      updateRoute(activeRouteId, (r) => {
+        // When switching to straight mode, clear all segment paths so they get recalculated
+        const segments = r.segments.map((s) => ({
+          ...s,
+          path: [],
+          intersections: [],
+          legDistances: [],
+          legBearings: [],
+          distance: 0,
+          duration: 0,
+        }))
+        return { ...r, routingMode: mode, segments, techniqueOutputs: [] }
+      })
+    },
+    [activeRouteId, updateRoute]
+  )
+
+  const reverseRoute = useCallback(() => {
+    if (!activeRouteId) return
+    updateRoute(activeRouteId, (r) => {
+      const reversed = [...r.waypoints].reverse()
+      const newSegments: Segment[] = []
+      for (let i = 0; i < reversed.length - 1; i++) {
+        const techIdx = i % ALL_TECHNIQUE_TYPES.length
+        newSegments.push({
+          id: uid(),
+          fromIndex: i,
+          toIndex: i + 1,
+          technique: ALL_TECHNIQUE_TYPES[techIdx],
+          description: "",
+          path: [],
+          intersections: [],
+          legDistances: [],
+          legBearings: [],
+          distance: 0,
+          duration: 0,
+        })
+      }
+      return { ...r, waypoints: reversed, segments: newSegments, techniqueOutputs: [] }
+    })
+  }, [activeRouteId, updateRoute])
+
+  const closeLoop = useCallback(() => {
+    if (!activeRouteId || !activeRoute) return
+    if (activeRoute.waypoints.length < 2) return
+    const first = activeRoute.waypoints[0]
+    // Check if already closed
+    const last = activeRoute.waypoints[activeRoute.waypoints.length - 1]
+    if (first.id === last.id) return
+    // Check if there's already a segment from last to first
+    const lastIdx = activeRoute.waypoints.length - 1
+    const alreadyClosed = activeRoute.segments.some(
+      (s) => s.fromIndex === lastIdx && s.toIndex === 0
+    )
+    if (alreadyClosed) return
+    closeRouteToWaypoint(first.id)
+  }, [activeRouteId, activeRoute, closeRouteToWaypoint])
+
+  // ── POI operations ──────────────────────────────────────
+  const addPoi = useCallback(
+    (position: LatLng, category: POICategory, name: string) => {
+      if (!activeRouteId) return
+      const poi: POI = { id: uid(), position, category, name }
+      updateRoute(activeRouteId, (r) => ({ ...r, pois: [...(r.pois ?? []), poi] }))
+    },
+    [activeRouteId, updateRoute]
+  )
+
+  const updatePoi = useCallback(
+    (poiId: string, updates: Partial<Pick<POI, "name" | "note" | "category">>) => {
+      if (!activeRouteId) return
+      updateRoute(activeRouteId, (r) => ({
+        ...r,
+        pois: (r.pois ?? []).map((p) => (p.id === poiId ? { ...p, ...updates } : p)),
+      }))
+    },
+    [activeRouteId, updateRoute]
+  )
+
+  const removePoi = useCallback(
+    (poiId: string) => {
+      if (!activeRouteId) return
+      updateRoute(activeRouteId, (r) => ({
+        ...r,
+        pois: (r.pois ?? []).filter((p) => p.id !== poiId),
+      }))
+    },
+    [activeRouteId, updateRoute]
+  )
+
+  const movePoi = useCallback(
+    (poiId: string, position: LatLng) => {
+      if (!activeRouteId) return
+      updateRoute(activeRouteId, (r) => ({
+        ...r,
+        pois: (r.pois ?? []).map((p) => (p.id === poiId ? { ...p, position } : p)),
+      }))
+    },
+    [activeRouteId, updateRoute]
+  )
+
   // ── Persist to localStorage ────────────────────────────
   useEffect(() => {
     const data: PersistedState = {
@@ -574,6 +684,15 @@ export function useProjectStore() {
     setSegmentTechnique,
     setSegmentDescription,
     setTechniqueOutputs,
+    // Planning
+    setRoutingMode,
+    reverseRoute,
+    closeLoop,
+    // POIs
+    addPoi,
+    updatePoi,
+    removePoi,
+    movePoi,
   }
 }
 
