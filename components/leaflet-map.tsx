@@ -12,7 +12,7 @@ import {
   useMapEvents,
 } from "react-leaflet"
 import { useTheme } from "next-themes"
-import { DEFAULT_CENTER, DEFAULT_ZOOM, TECHNIQUE_COLORS } from "@/lib/types"
+import { DEFAULT_CENTER, DEFAULT_ZOOM, TECHNIQUE_COLORS, POI_META } from "@/lib/types"
 import type { ProjectStore } from "@/hooks/use-project-store"
 import { SegmentBadges } from "@/components/map/segment-badges"
 import { RouteDragHandler } from "@/components/map/route-drag-handler"
@@ -49,15 +49,33 @@ function createGhostIcon(color: string): L.DivIcon {
   })
 }
 
+// ── POI marker icon ──────────────────────────────────────
+function createPoiIcon(emoji: string): L.DivIcon {
+  return L.divIcon({
+    className: "",
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    html: `<div style="width:28px;height:28px;border-radius:50%;background:#fff;border:2px solid #374151;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 4px rgba(0,0,0,.3);cursor:pointer">${emoji}</div>`,
+  })
+}
+
 // ── Click handler ────────────────────────────────────────
 function MapClickHandler({ store }: { store: ProjectStore }) {
   useMapEvents({
     click(e) {
-      if (store.editorMode !== "adding-waypoints" || !store.activeRoute) return
-      store.addWaypoint({ lat: e.latlng.lat, lng: e.latlng.lng })
-      const count =
-        store.activeRoute.waypoints.filter((w) => !w.ghost).length + 1
-      toast.success(`Punt ${count} geplaatst`)
+      if (store.editorMode === "adding-waypoints" && store.activeRoute) {
+        store.addWaypoint({ lat: e.latlng.lat, lng: e.latlng.lng })
+        const count =
+          store.activeRoute.waypoints.filter((w) => !w.ghost).length + 1
+        toast.success(`Punt ${count} geplaatst`)
+      } else if (store.editorMode === "adding-pois" && store.activeRoute) {
+        store.addPoi(
+          { lat: e.latlng.lat, lng: e.latlng.lng },
+          "checkpoint",
+          `POI ${(store.activeRoute.pois?.length ?? 0) + 1}`
+        )
+        toast.success("POI geplaatst")
+      }
     },
   })
   return null
@@ -68,7 +86,7 @@ function CursorStyle({ store }: { store: ProjectStore }) {
   const map = useMap()
   useEffect(() => {
     const container = map.getContainer()
-    if (store.editorMode === "adding-waypoints") {
+    if (store.editorMode === "adding-waypoints" || store.editorMode === "adding-pois") {
       container.style.cursor = "crosshair"
     } else {
       container.style.cursor = ""
@@ -204,6 +222,33 @@ export default function LeafletMapComponent({
     return result
   }, [project, store.activeRouteId])
 
+  // Collect POI markers
+  const poiMarkers = useMemo(() => {
+    if (!project) return []
+    const result: {
+      key: string
+      position: [number, number]
+      icon: L.DivIcon
+      poiId: string
+      draggable: boolean
+    }[] = []
+
+    for (const r of project.routes) {
+      const isActive = r.id === store.activeRouteId
+      for (const poi of r.pois ?? []) {
+        const meta = POI_META[poi.category]
+        result.push({
+          key: poi.id,
+          position: [poi.position.lat, poi.position.lng],
+          icon: createPoiIcon(meta?.emoji ?? "\uD83D\uDCCD"),
+          poiId: poi.id,
+          draggable: isActive,
+        })
+      }
+    }
+    return result
+  }, [project, store.activeRouteId])
+
   return (
     <>
       {resolvedTheme === "dark" && (
@@ -282,6 +327,28 @@ export default function LeafletMapComponent({
                     description: "Route is verbonden met dit punt.",
                   })
                 }
+              },
+            }}
+          />
+        ))}
+
+        {poiMarkers.map((m) => (
+          <Marker
+            key={m.key}
+            position={m.position}
+            icon={m.icon}
+            zIndexOffset={200}
+            draggable={m.draggable}
+            eventHandlers={{
+              dragend: m.draggable
+                ? (e) => {
+                    const latlng = e.target.getLatLng()
+                    store.movePoi(m.poiId, { lat: latlng.lat, lng: latlng.lng })
+                  }
+                : undefined,
+              click: () => {
+                store.removePoi(m.poiId)
+                toast.info("POI verwijderd")
               },
             }}
           />

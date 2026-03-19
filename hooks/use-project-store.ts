@@ -11,6 +11,8 @@ import type {
   EditorMode,
   TechniqueType,
   TechniqueOutput,
+  POI,
+  POICategory,
 } from "@/lib/types"
 import { ROUTE_COLORS, ALL_TECHNIQUE_TYPES } from "@/lib/types"
 

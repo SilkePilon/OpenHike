@@ -55,10 +55,43 @@ export interface Route {
   name: string
   waypoints: Waypoint[]
   segments: Segment[]
+  /** Points of interest along the route */
+  pois: POI[]
   /** Generated technique outputs (one per segment) */
   techniqueOutputs: TechniqueOutput[]
   color: string
 }
+
+// ── POIs ─────────────────────────────────────────────────
+export type POICategory =
+  | "water"
+  | "rest"
+  | "shelter"
+  | "danger"
+  | "info"
+  | "checkpoint"
+  | "custom"
+
+export interface POI {
+  id: string
+  position: LatLng
+  category: POICategory
+  name: string
+  note?: string
+  icon?: string
+}
+
+export const POI_META: Record<POICategory, { label: string; emoji: string }> = {
+  water: { label: "Water", emoji: "\uD83D\uDCA7" },
+  rest: { label: "Rustpunt", emoji: "\uD83E\uDE91" },
+  shelter: { label: "Schuilplek", emoji: "\u26FA" },
+  danger: { label: "Gevaar", emoji: "\u26A0\uFE0F" },
+  info: { label: "Info", emoji: "\u2139\uFE0F" },
+  checkpoint: { label: "Checkpoint", emoji: "\uD83C\uDFC1" },
+  custom: { label: "Anders", emoji: "\uD83D\uDCCD" },
+}
+
+export const ALL_POI_CATEGORIES = Object.keys(POI_META) as POICategory[]
 
 // ── Routetechnieken ──────────────────────────────────────
 export type TechniqueType =
@@ -145,7 +178,7 @@ export const TECHNIQUE_COLORS: Record<TechniqueType, string> = {
 
 // ── App state ────────────────────────────────────────────
 export type AppView = "home" | "project"
-export type EditorMode = "idle" | "adding-waypoints"
+export type EditorMode = "idle" | "adding-waypoints" | "adding-pois"
 
 export const ROUTE_COLORS = [
   "#2563eb",

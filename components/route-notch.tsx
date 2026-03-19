@@ -13,6 +13,7 @@ import {
   EraserIcon,
   Trash2Icon,
   DownloadIcon,
+  MapPinIcon,
 } from "lucide-react"
 import type { ProjectStore } from "@/hooks/use-project-store"
 import { RouteConfigDialog } from "@/components/route-config-dialog"
@@ -28,6 +29,7 @@ export function RouteNotch({ store }: RouteNotchProps) {
   if (!route) return null
 
   const isPlacing = store.editorMode === "adding-waypoints"
+  const isPlacingPois = store.editorMode === "adding-pois"
 
   return (
     <>
@@ -73,6 +75,29 @@ export function RouteNotch({ store }: RouteNotchProps) {
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">Punten wissen</TooltipContent>
+          </Tooltip>
+
+          {/* Add POIs */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant={isPlacingPois ? "default" : "ghost"}
+                className="size-8"
+                onClick={() => {
+                  const next = isPlacingPois ? "idle" : "adding-pois"
+                  store.setEditorMode(next)
+                  if (next === "adding-pois") {
+                    toast.info("Klik op de kaart om een POI te plaatsen")
+                  }
+                }}
+              >
+                {isPlacingPois ? <SquareIcon /> : <MapPinIcon />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              {isPlacingPois ? "Stop POIs plaatsen" : "POI plaatsen"}
+            </TooltipContent>
           </Tooltip>
 
           {/* Delete route */}
