@@ -33,6 +33,7 @@ export function RouteNotch({ store }: RouteNotchProps) {
 
   const isPlacing = store.editorMode === "adding-waypoints"
   const isPlacingPois = store.editorMode === "adding-pois"
+  const isRemoving = store.editorMode === "removing-waypoints"
 
   return (
     <>
@@ -61,23 +62,28 @@ export function RouteNotch({ store }: RouteNotchProps) {
             </TooltipContent>
           </Tooltip>
 
-          {/* Clear waypoints */}
+          {/* Remove single waypoint toggle */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 size="icon"
-                variant="ghost"
+                variant={isRemoving ? "default" : "ghost"}
                 className="size-8"
                 onClick={() => {
-                  store.clearWaypoints()
-                  toast.info("Alle punten gewist")
+                  const next = isRemoving ? "idle" : "removing-waypoints"
+                  store.setEditorMode(next)
+                  if (next === "removing-waypoints") {
+                    toast.info("Klik op een punt om het te verwijderen")
+                  }
                 }}
                 disabled={route.waypoints.length === 0}
               >
-                <EraserIcon />
+                {isRemoving ? <SquareIcon /> : <EraserIcon />}
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="bottom">Punten wissen</TooltipContent>
+            <TooltipContent side="bottom">
+              {isRemoving ? "Stop verwijderen" : "Punt wissen"}
+            </TooltipContent>
           </Tooltip>
 
           {/* Add POIs */}
@@ -111,10 +117,17 @@ export function RouteNotch({ store }: RouteNotchProps) {
             <TooltipTrigger asChild>
               <Button
                 size="icon"
-                variant={(route.routingMode ?? "snap") === "straight" ? "default" : "ghost"}
+                variant={
+                  (route.routingMode ?? "snap") === "straight"
+                    ? "default"
+                    : "ghost"
+                }
                 className="size-8"
                 onClick={() => {
-                  const next = (route.routingMode ?? "snap") === "snap" ? "straight" : "snap"
+                  const next =
+                    (route.routingMode ?? "snap") === "snap"
+                      ? "straight"
+                      : "snap"
                   store.setRoutingMode(next)
                   toast.info(
                     next === "straight"

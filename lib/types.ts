@@ -182,7 +182,7 @@ export const TECHNIQUE_COLORS: Record<TechniqueType, string> = {
 
 // ── App state ────────────────────────────────────────────
 export type AppView = "home" | "project"
-export type EditorMode = "idle" | "adding-waypoints" | "adding-pois"
+export type EditorMode = "idle" | "adding-waypoints" | "adding-pois" | "removing-waypoints"
 
 export const ROUTE_COLORS = [
   "#2563eb",

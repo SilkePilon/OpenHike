@@ -19,8 +19,7 @@ const fontMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "OpenHike — Route Planner",
-  description:
-    "Plan hiking routes with scouting techniques — works offline.",
+  description: "Plan hiking routes with scouting techniques — works offline.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,

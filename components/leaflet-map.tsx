@@ -1,18 +1,22 @@
 "use client"
 
-import { useEffect, useMemo } from "react"
+import { useEffect, useMemo, useRef, useCallback, useState } from "react"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
 import {
   MapContainer,
   TileLayer,
-  Polyline,
   Marker,
   useMap,
   useMapEvents,
 } from "react-leaflet"
 import { useTheme } from "next-themes"
-import { DEFAULT_CENTER, DEFAULT_ZOOM, TECHNIQUE_COLORS, POI_META } from "@/lib/types"
+import {
+  DEFAULT_CENTER,
+  DEFAULT_ZOOM,
+  TECHNIQUE_COLORS,
+  POI_META,
+} from "@/lib/types"
 import type { ProjectStore } from "@/hooks/use-project-store"
 import { SegmentBadges } from "@/components/map/segment-badges"
 import { RouteDragHandler } from "@/components/map/route-drag-handler"
@@ -59,6 +63,106 @@ function createPoiIcon(emoji: string): L.DivIcon {
   })
 }
 
+// ── Animated polyline (SVG stroke-dashoffset, strict-mode safe) ──
+function AnimatedPolyline({
+  positions,
+  color,
+  opacity,
+  weight,
+  animate = true,
+}: {
+  positions: [number, number][]
+  color: string
+  opacity: number
+  weight: number
+  animate?: boolean
+}) {
+  const map = useMap()
+  const lineRef = useRef<L.Polyline | null>(null)
+
+  // Stable identity string so we only recreate when the path actually changes
+  const posKey = useMemo(() => {
+    if (positions.length < 2) return ""
+    return `${positions.length}|${positions[0][0]},${positions[0][1]}|${positions[positions.length - 1][0]},${positions[positions.length - 1][1]}`
+  }, [positions])
+
+  // Keep a ref so the effect always reads the latest positions array
+  const posRef = useRef(positions)
+  posRef.current = positions
+
+  // Style-only updates (no animation, no recreation)
+  const syncStyle = useCallback(() => {
+    lineRef.current?.setStyle({ color, opacity, weight })
+  }, [color, opacity, weight])
+
+  useEffect(() => {
+    syncStyle()
+  }, [syncStyle])
+
+  // Main lifecycle: create polyline, optionally animate, clean up fully
+  useEffect(() => {
+    const pts = posRef.current
+    if (pts.length < 2 || !posKey) return
+
+    // Fresh SVG renderer per cycle so strict-mode remounts work cleanly
+    const renderer = L.svg({ padding: 0.5 })
+
+    const line = L.polyline(pts, {
+      color,
+      opacity,
+      weight,
+      fill: false,
+      interactive: false,
+      renderer,
+    }).addTo(map)
+    lineRef.current = line
+
+    let timer: ReturnType<typeof setTimeout> | undefined
+    let fallback: ReturnType<typeof setTimeout> | undefined
+
+    if (animate && pts.length > 2) {
+      // _path exists immediately after addTo with an SVG renderer
+      const pathEl = (line as any)._path as SVGPathElement | undefined
+      if (pathEl) {
+        const totalLen = pathEl.getTotalLength()
+        if (totalLen > 0) {
+          // Immediately hide — no flash
+          pathEl.style.strokeDasharray = `${totalLen}`
+          pathEl.style.strokeDashoffset = `${totalLen}`
+          pathEl.style.transition = "none"
+
+          // On next frame, start reveal transition
+          timer = setTimeout(() => {
+            pathEl.style.transition =
+              "stroke-dashoffset 1.2s cubic-bezier(0.22, 1, 0.36, 1)"
+            pathEl.style.strokeDashoffset = "0"
+          }, 20)
+
+          // Clean dash styles after animation so zoom/pan works
+          const onEnd = () => {
+            pathEl.style.strokeDasharray = ""
+            pathEl.style.strokeDashoffset = ""
+            pathEl.style.transition = ""
+          }
+          pathEl.addEventListener("transitionend", onEnd, { once: true })
+          fallback = setTimeout(onEnd, 1500)
+        }
+      }
+    }
+
+    return () => {
+      if (timer) clearTimeout(timer)
+      if (fallback) clearTimeout(fallback)
+      line.remove()
+      renderer.remove()
+      lineRef.current = null
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, posKey])
+
+  return null
+}
+
 // ── Click handler ────────────────────────────────────────
 function MapClickHandler({ store }: { store: ProjectStore }) {
   useMapEvents({
@@ -86,8 +190,13 @@ function CursorStyle({ store }: { store: ProjectStore }) {
   const map = useMap()
   useEffect(() => {
     const container = map.getContainer()
-    if (store.editorMode === "adding-waypoints" || store.editorMode === "adding-pois") {
+    if (
+      store.editorMode === "adding-waypoints" ||
+      store.editorMode === "adding-pois"
+    ) {
       container.style.cursor = "crosshair"
+    } else if (store.editorMode === "removing-waypoints") {
+      container.style.cursor = "pointer"
     } else {
       container.style.cursor = ""
     }
@@ -148,6 +257,15 @@ export default function LeafletMapComponent({
   const tileUrl = resolvedTheme === "dark" ? TILE_DARK : TILE_LIGHT
   const project = store.activeProject
 
+  // Force a fresh MapContainer after HMR by using a mount key
+  const [mapKey, setMapKey] = useState(0)
+  useEffect(() => {
+    return () => {
+      // On unmount (HMR), bump key so a fresh MapContainer is created next render
+      setMapKey((k) => k + 1)
+    }
+  }, [])
+
   // Collect all polylines to render
   const polylines = useMemo(() => {
     if (!project) return []
@@ -157,6 +275,7 @@ export default function LeafletMapComponent({
       color: string
       opacity: number
       weight: number
+      animate: boolean
     }[] = []
 
     for (const r of project.routes) {
@@ -169,6 +288,7 @@ export default function LeafletMapComponent({
           color: TECHNIQUE_COLORS[seg.technique],
           opacity: isActive ? 1 : 0.45,
           weight: isActive ? 5 : 3,
+          animate: isActive,
         })
       }
     }
@@ -255,6 +375,7 @@ export default function LeafletMapComponent({
         <style dangerouslySetInnerHTML={{ __html: DARK_TILE_STYLE }} />
       )}
       <MapContainer
+        key={mapKey}
         center={[DEFAULT_CENTER.lat, DEFAULT_CENTER.lng]}
         zoom={DEFAULT_ZOOM}
         zoomControl={false}
@@ -282,14 +403,13 @@ export default function LeafletMapComponent({
         <UserLocationDot />
 
         {polylines.map((line) => (
-          <Polyline
+          <AnimatedPolyline
             key={line.key}
             positions={line.positions}
-            pathOptions={{
-              color: line.color,
-              opacity: line.opacity,
-              weight: line.weight,
-            }}
+            color={line.color}
+            opacity={line.opacity}
+            weight={line.weight}
+            animate={line.animate}
           />
         ))}
 
@@ -314,6 +434,11 @@ export default function LeafletMapComponent({
                   }
                 : undefined,
               click: () => {
+                if (store.editorMode === "removing-waypoints") {
+                  store.removeWaypoint(m.waypointId)
+                  toast.info(m.ghost ? "Omleidpunt verwijderd" : "Punt verwijderd")
+                  return
+                }
                 if (m.ghost) {
                   store.removeWaypoint(m.waypointId)
                   toast.info("Omleidpunt verwijderd", {

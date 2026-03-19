@@ -15,17 +15,19 @@ function downloadBlob(blob: Blob, filename: string) {
 function routePath(route: Route): LatLng[] {
   const points: LatLng[] = []
   for (const seg of route.segments) {
-    const segPoints = seg.path.length > 0
-      ? seg.path
-      : [
-          route.waypoints[seg.fromIndex]?.position,
-          route.waypoints[seg.toIndex]?.position,
-        ].filter(Boolean) as LatLng[]
+    const segPoints =
+      seg.path.length > 0
+        ? seg.path
+        : ([
+            route.waypoints[seg.fromIndex]?.position,
+            route.waypoints[seg.toIndex]?.position,
+          ].filter(Boolean) as LatLng[])
     // Avoid duplicating the junction point between segments
     for (let i = 0; i < segPoints.length; i++) {
       if (i === 0 && points.length > 0) {
         const last = points[points.length - 1]
-        if (last.lat === segPoints[0].lat && last.lng === segPoints[0].lng) continue
+        if (last.lat === segPoints[0].lat && last.lng === segPoints[0].lng)
+          continue
       }
       points.push(segPoints[i])
     }
@@ -59,7 +61,11 @@ export async function exportRouteAsZip(route: Route): Promise<void> {
 // ── GPX export ───────────────────────────────────────────
 
 function escapeXml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
 }
 
 export function exportRouteAsGpx(route: Route): void {
@@ -164,7 +170,8 @@ export function parseGpx(xmlText: string): ImportedRoute {
   const parser = new DOMParser()
   const doc = parser.parseFromString(xmlText, "application/xml")
 
-  const nameEl = doc.querySelector("trk > name") ?? doc.querySelector("metadata > name")
+  const nameEl =
+    doc.querySelector("trk > name") ?? doc.querySelector("metadata > name")
   const name = nameEl?.textContent?.trim() || "Imported route"
 
   // Track points
@@ -192,7 +199,12 @@ export function parseGpx(xmlText: string): ImportedRoute {
     if (!isNaN(lat) && !isNaN(lng)) waypoints.push({ lat, lng })
   })
 
-  return { name, waypoints: waypoints.length > 0 ? waypoints : simplifyTrack(trackPoints, 10), trackPoints }
+  return {
+    name,
+    waypoints:
+      waypoints.length > 0 ? waypoints : simplifyTrack(trackPoints, 10),
+    trackPoints,
+  }
 }
 
 // ── GeoJSON import ───────────────────────────────────────
@@ -222,11 +234,19 @@ export function parseGeoJson(text: string): ImportedRoute {
         }
       }
     } else if (feature.geometry.type === "Point") {
-      waypoints.push({ lat: feature.geometry.coordinates[1], lng: feature.geometry.coordinates[0] })
+      waypoints.push({
+        lat: feature.geometry.coordinates[1],
+        lng: feature.geometry.coordinates[0],
+      })
     }
   }
 
-  return { name, waypoints: waypoints.length > 0 ? waypoints : simplifyTrack(trackPoints, 10), trackPoints }
+  return {
+    name,
+    waypoints:
+      waypoints.length > 0 ? waypoints : simplifyTrack(trackPoints, 10),
+    trackPoints,
+  }
 }
 
 /** Simplify a track to roughly `maxPoints` using uniform sampling */
