@@ -31,10 +31,13 @@ import {
   ArrowLeftIcon,
   MapPinPlusIcon,
   CompassIcon,
+  UploadIcon,
 } from "lucide-react"
 import type { ProjectStore } from "@/hooks/use-project-store"
 import { TECHNIQUE_COLORS, TECHNIQUE_META } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { parseGpx, parseGeoJson } from "@/lib/export"
+import { toast } from "sonner"
 
 interface ProjectPanelProps {
   store: ProjectStore
@@ -338,53 +341,93 @@ export function ProjectPanel({ store }: ProjectPanelProps) {
 
                 {/* Footer */}
                 <div className="shrink-0 rounded-br-xl border-t bg-muted/50 px-3 py-2">
-                  <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full gap-1.5 text-xs"
-                      >
-                        <PlusIcon className="size-3.5" />
-                        Nieuwe route
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-sm">
-                      <form
-                        onSubmit={(e) => {
-                          e.preventDefault()
-                          handleCreate()
-                        }}
-                      >
-                        <DialogHeader>
-                          <DialogTitle>Nieuwe route</DialogTitle>
-                          <DialogDescription>
-                            Geef een naam voor de nieuwe route.
-                          </DialogDescription>
-                        </DialogHeader>
-                        <FieldGroup className="pb-4">
-                          <Field>
-                            <Label htmlFor="create-name">Naam</Label>
-                            <Input
-                              id="create-name"
-                              value={newName}
-                              onChange={(e) => setNewName(e.target.value)}
-                              placeholder="Route naam..."
-                              autoFocus
-                            />
-                          </Field>
-                        </FieldGroup>
-                        <DialogFooter>
-                          <DialogClose asChild>
-                            <Button variant="outline">Annuleren</Button>
-                          </DialogClose>
-                          <Button type="submit" disabled={!newName.trim()}>
-                            Aanmaken
-                          </Button>
-                        </DialogFooter>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
+                  <div className="flex gap-1.5">
+                    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 gap-1.5 text-xs"
+                        >
+                          <PlusIcon className="size-3.5" />
+                          Nieuwe route
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-sm">
+                        <form
+                          onSubmit={(e) => {
+                            e.preventDefault()
+                            handleCreate()
+                          }}
+                        >
+                          <DialogHeader>
+                            <DialogTitle>Nieuwe route</DialogTitle>
+                            <DialogDescription>
+                              Geef een naam voor de nieuwe route.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <FieldGroup className="pb-4">
+                            <Field>
+                              <Label htmlFor="create-name">Naam</Label>
+                              <Input
+                                id="create-name"
+                                value={newName}
+                                onChange={(e) => setNewName(e.target.value)}
+                                placeholder="Route naam..."
+                                autoFocus
+                              />
+                            </Field>
+                          </FieldGroup>
+                          <DialogFooter>
+                            <DialogClose asChild>
+                              <Button variant="outline">Annuleren</Button>
+                            </DialogClose>
+                            <Button type="submit" disabled={!newName.trim()}>
+                              Aanmaken
+                            </Button>
+                          </DialogFooter>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="size-8 shrink-0"
+                          onClick={() => {
+                            const input = document.createElement("input")
+                            input.type = "file"
+                            input.accept = ".gpx,.geojson,.json"
+                            input.onchange = async () => {
+                              const file = input.files?.[0]
+                              if (!file) return
+                              try {
+                                const text = await file.text()
+                                const imported = file.name.endsWith(".gpx")
+                                  ? parseGpx(text)
+                                  : parseGeoJson(text)
+                                if (imported.waypoints.length < 2) {
+                                  toast.error("Bestand bevat te weinig punten")
+                                  return
+                                }
+                                store.importRoute(imported)
+                                toast.success(`Route "${imported.name}" geïmporteerd`, {
+                                  description: `${imported.waypoints.length} punten geladen.`,
+                                })
+                              } catch {
+                                toast.error("Kon bestand niet importeren")
+                              }
+                            }
+                            input.click()
+                          }}
+                        >
+                          <UploadIcon className="size-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="right">Importeer GPX/GeoJSON</TooltipContent>
+                    </Tooltip>
+                  </div>
                 </div>
               </div>
             )}

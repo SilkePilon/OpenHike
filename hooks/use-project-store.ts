@@ -15,6 +15,7 @@ import type {
   POICategory,
 } from "@/lib/types"
 import { ROUTE_COLORS, ALL_TECHNIQUE_TYPES } from "@/lib/types"
+import type { ImportedRoute } from "@/lib/export"
 
 function uid() {
   return crypto.randomUUID()
@@ -138,6 +139,50 @@ export function useProjectStore() {
       }))
       setActiveRouteId(route.id)
       setEditorMode("adding-waypoints")
+      return route
+    },
+    [activeProjectId, activeProject, updateProject]
+  )
+
+  const importRoute = useCallback(
+    (imported: ImportedRoute) => {
+      if (!activeProjectId) return null
+      const colorIdx = (activeProject?.routes.length ?? 0) % ROUTE_COLORS.length
+      const waypoints: Waypoint[] = imported.waypoints.map((pos) => ({
+        id: uid(),
+        position: pos,
+      }))
+      const segments: Segment[] = []
+      for (let i = 0; i < waypoints.length - 1; i++) {
+        const techIdx = i % ALL_TECHNIQUE_TYPES.length
+        segments.push({
+          id: uid(),
+          fromIndex: i,
+          toIndex: i + 1,
+          technique: ALL_TECHNIQUE_TYPES[techIdx],
+          description: "",
+          path: [],
+          intersections: [],
+          legDistances: [],
+          legBearings: [],
+          distance: 0,
+          duration: 0,
+        })
+      }
+      const route: Route = {
+        id: uid(),
+        name: imported.name,
+        waypoints,
+        segments,
+        techniqueOutputs: [],
+        color: ROUTE_COLORS[colorIdx],
+      }
+      updateProject(activeProjectId, (p) => ({
+        ...p,
+        routes: [...p.routes, route],
+      }))
+      setActiveRouteId(route.id)
+      setEditorMode("idle")
       return route
     },
     [activeProjectId, activeProject, updateProject]
@@ -509,6 +554,7 @@ export function useProjectStore() {
     goHome,
     // Route
     createRoute,
+    importRoute,
     deleteRoute,
     selectRoute,
     updateRoute,
