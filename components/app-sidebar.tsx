@@ -26,6 +26,7 @@ import {
 import type { ProjectStore } from "@/hooks/use-project-store"
 import { TECHNIQUE_COLORS, TECHNIQUE_META } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { useConfirm } from "@/components/confirm-dialog"
 import { toast } from "sonner"
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
@@ -36,6 +37,7 @@ export function AppSidebar({ store, ...props }: AppSidebarProps) {
   const { setOpen } = useSidebar()
   const [newProjectName, setNewProjectName] = useState("")
   const [newRouteName, setNewRouteName] = useState("")
+  const confirm = useConfirm()
 
   const project = store.activeProject
 
@@ -151,7 +153,16 @@ export function AppSidebar({ store, ...props }: AppSidebarProps) {
                   variant="ghost"
                   size="icon"
                   className="size-7 text-muted-foreground hover:text-destructive"
-                  onClick={() => store.deleteProject(project.id)}
+                  onClick={async () => {
+                    const ok = await confirm({
+                      title: `Project "${project.name}" verwijderen?`,
+                      description:
+                        "Alle routes in dit project worden verwijderd. Dit kan niet ongedaan worden.",
+                      confirmLabel: "Verwijderen",
+                      variant: "destructive",
+                    })
+                    if (ok) store.deleteProject(project.id)
+                  }}
                 >
                   <Trash2Icon className="size-3.5" />
                 </Button>

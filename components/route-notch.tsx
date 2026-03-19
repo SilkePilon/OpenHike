@@ -20,6 +20,7 @@ import {
 } from "lucide-react"
 import type { ProjectStore } from "@/hooks/use-project-store"
 import { RouteConfigDialog } from "@/components/route-config-dialog"
+import { useConfirm } from "@/components/confirm-dialog"
 import { toast } from "sonner"
 
 interface RouteNotchProps {
@@ -28,6 +29,7 @@ interface RouteNotchProps {
 
 export function RouteNotch({ store }: RouteNotchProps) {
   const [configOpen, setConfigOpen] = useState(false)
+  const confirm = useConfirm()
   const route = store.activeRoute
   if (!route) return null
 
@@ -198,7 +200,15 @@ export function RouteNotch({ store }: RouteNotchProps) {
                 size="icon"
                 variant="ghost"
                 className="size-8"
-                onClick={() => {
+                onClick={async () => {
+                  const ok = await confirm({
+                    title: `Route "${route.name}" verwijderen?`,
+                    description:
+                      "Alle punten en segmenten worden verwijderd. Dit kan niet ongedaan worden.",
+                    confirmLabel: "Verwijderen",
+                    variant: "destructive",
+                  })
+                  if (!ok) return
                   const name = route.name
                   store.deleteRoute(route.id)
                   toast.info(`Route "${name}" verwijderd`)

@@ -17,11 +17,13 @@ import {
   TECHNIQUE_COLORS,
   POI_META,
 } from "@/lib/types"
+import type { POI } from "@/lib/types"
 import type { ProjectStore } from "@/hooks/use-project-store"
 import { SegmentBadges } from "@/components/map/segment-badges"
 import { RouteDragHandler } from "@/components/map/route-drag-handler"
 import { UserLocationDot } from "@/components/map/user-location-dot"
 import { FitBounds } from "@/components/map/fit-bounds"
+import { PoiEditDialog } from "@/components/poi-edit-dialog"
 import { toast } from "sonner"
 
 // ── Numbered circle marker icon ──────────────────────────
@@ -54,13 +56,87 @@ function createGhostIcon(color: string): L.DivIcon {
 }
 
 // ── POI marker icon ──────────────────────────────────────
-function createPoiIcon(emoji: string): L.DivIcon {
+function createPoiIcon(emoji: string, poiId?: string): L.DivIcon {
+  const dataAttr = poiId ? ` data-poi-id="${poiId}"` : ""
   return L.divIcon({
     className: "",
     iconSize: [28, 28],
     iconAnchor: [14, 14],
-    html: `<div style="width:28px;height:28px;border-radius:50%;background:#fff;border:2px solid #374151;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 4px rgba(0,0,0,.3);cursor:pointer">${emoji}</div>`,
+    html: `<div style="width:28px;height:28px;border-radius:6px;background:#fff;border:2px solid #374151;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 4px rgba(0,0,0,.3);cursor:pointer" data-poi-marker${dataAttr}>${emoji}</div>`,
   })
+}
+
+// ── POI hover tooltip (rendered into the Leaflet pane) ───
+function escapeHtml(str: string) {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+}
+
+function PoiTooltipLayer({ store }: { store: ProjectStore }) {
+  const map = useMap()
+  const tooltipRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    const container = map.getContainer()
+    const tooltip = document.createElement("div")
+    tooltip.className = "poi-tooltip"
+    tooltip.style.cssText =
+      "position:absolute;z-index:1000;pointer-events:none;opacity:0;transform:translateY(4px) translateX(-50%);transition:opacity .2s ease,transform .2s ease;background:var(--background,#fff);color:var(--foreground,#111);border:1px solid var(--border,#e5e7eb);border-radius:10px;padding:6px 10px;box-shadow:0 4px 12px rgba(0,0,0,.15);max-width:220px;font-size:13px;line-height:1.4;"
+    container.appendChild(tooltip)
+    tooltipRef.current = tooltip
+
+    const show = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      const marker = target.closest("[data-poi-marker]") as HTMLElement | null
+      if (!marker) return
+      const poiId = marker.getAttribute("data-poi-id")
+      if (!poiId) return
+
+      // Find POI data
+      let poi: POI | undefined
+      for (const r of store.activeProject?.routes ?? []) {
+        poi = r.pois?.find((p) => p.id === poiId)
+        if (poi) break
+      }
+      if (!poi) return
+
+      const emoji = escapeHtml(
+        poi.icon || POI_META[poi.category]?.emoji || "📍"
+      )
+      const name = escapeHtml(poi.name || "POI")
+      const note = escapeHtml(poi.note || "")
+
+      tooltip.innerHTML = `<div style="display:flex;align-items:flex-start;gap:6px"><span style="font-size:20px;line-height:1">${emoji}</span><div><div style="font-weight:600">${name}</div>${note ? `<div style="opacity:.65;margin-top:2px">${note}</div>` : ""}</div></div>`
+
+      const rect = marker.getBoundingClientRect()
+      const containerRect = container.getBoundingClientRect()
+      tooltip.style.left = `${rect.left - containerRect.left + rect.width / 2}px`
+      tooltip.style.top = `${rect.top - containerRect.top - 8}px`
+      tooltip.style.opacity = "1"
+      tooltip.style.transform = "translateY(-100%) translateX(-50%)"
+    }
+
+    const hide = (e: MouseEvent) => {
+      const target = e.relatedTarget as HTMLElement | null
+      if (target?.closest?.("[data-poi-marker]")) return
+      tooltip.style.opacity = "0"
+      tooltip.style.transform = "translateY(4px) translateX(-50%)"
+    }
+
+    container.addEventListener("mouseover", show)
+    container.addEventListener("mouseout", hide)
+
+    return () => {
+      container.removeEventListener("mouseover", show)
+      container.removeEventListener("mouseout", hide)
+      tooltip.remove()
+    }
+  }, [map, store])
+
+  return null
 }
 
 // ── Animated polyline (SVG stroke-dashoffset, strict-mode safe) ──
@@ -164,7 +240,13 @@ function AnimatedPolyline({
 }
 
 // ── Click handler ────────────────────────────────────────
-function MapClickHandler({ store }: { store: ProjectStore }) {
+function MapClickHandler({
+  store,
+  onPoiPlaced,
+}: {
+  store: ProjectStore
+  onPoiPlaced: (poiId: string) => void
+}) {
   useMapEvents({
     click(e) {
       if (store.editorMode === "adding-waypoints" && store.activeRoute) {
@@ -173,12 +255,14 @@ function MapClickHandler({ store }: { store: ProjectStore }) {
           store.activeRoute.waypoints.filter((w) => !w.ghost).length + 1
         toast.success(`Punt ${count} geplaatst`)
       } else if (store.editorMode === "adding-pois" && store.activeRoute) {
-        store.addPoi(
+        const poiId = store.addPoi(
           { lat: e.latlng.lat, lng: e.latlng.lng },
-          "checkpoint",
+          "custom",
           `POI ${(store.activeRoute.pois?.length ?? 0) + 1}`
         )
-        toast.success("POI geplaatst")
+        if (poiId) {
+          onPoiPlaced(poiId)
+        }
       }
     },
   })
@@ -256,6 +340,21 @@ export default function LeafletMapComponent({
   const { resolvedTheme } = useTheme()
   const tileUrl = resolvedTheme === "dark" ? TILE_DARK : TILE_LIGHT
   const project = store.activeProject
+
+  // POI dialog state
+  const [editingPoiId, setEditingPoiId] = useState<string | null>(null)
+  const editingPoi = useMemo(() => {
+    if (!editingPoiId || !project) return null
+    for (const r of project.routes) {
+      const poi = r.pois?.find((p) => p.id === editingPoiId)
+      if (poi) return poi
+    }
+    return null
+  }, [editingPoiId, project])
+
+  const handlePoiPlaced = useCallback((poiId: string) => {
+    setEditingPoiId(poiId)
+  }, [])
 
   // Force a fresh MapContainer after HMR by using a mount key
   const [mapKey, setMapKey] = useState(0)
@@ -356,11 +455,12 @@ export default function LeafletMapComponent({
     for (const r of project.routes) {
       const isActive = r.id === store.activeRouteId
       for (const poi of r.pois ?? []) {
-        const meta = POI_META[poi.category]
+        const emoji =
+          poi.icon || POI_META[poi.category]?.emoji || "\uD83D\uDCCD"
         result.push({
           key: poi.id,
           position: [poi.position.lat, poi.position.lng],
-          icon: createPoiIcon(meta?.emoji ?? "\uD83D\uDCCD"),
+          icon: createPoiIcon(emoji, poi.id),
           poiId: poi.id,
           draggable: isActive,
         })
@@ -395,12 +495,13 @@ export default function LeafletMapComponent({
         />
 
         <MapRefSetter mapRef={mapRef} />
-        <MapClickHandler store={store} />
+        <MapClickHandler store={store} onPoiPlaced={handlePoiPlaced} />
         <CursorStyle store={store} />
         <FitBounds store={store} />
         <SegmentBadges store={store} />
         <RouteDragHandler store={store} />
         <UserLocationDot />
+        <PoiTooltipLayer store={store} />
 
         {polylines.map((line) => (
           <AnimatedPolyline
@@ -436,7 +537,9 @@ export default function LeafletMapComponent({
               click: () => {
                 if (store.editorMode === "removing-waypoints") {
                   store.removeWaypoint(m.waypointId)
-                  toast.info(m.ghost ? "Omleidpunt verwijderd" : "Punt verwijderd")
+                  toast.info(
+                    m.ghost ? "Omleidpunt verwijderd" : "Punt verwijderd"
+                  )
                   return
                 }
                 if (m.ghost) {
@@ -472,13 +575,41 @@ export default function LeafletMapComponent({
                   }
                 : undefined,
               click: () => {
-                store.removePoi(m.poiId)
-                toast.info("POI verwijderd")
+                setEditingPoiId(m.poiId)
               },
             }}
           />
         ))}
       </MapContainer>
+
+      <PoiEditDialog
+        open={!!editingPoiId}
+        onOpenChange={(open) => {
+          if (!open) setEditingPoiId(null)
+        }}
+        initialEmoji={
+          editingPoi?.icon ||
+          POI_META[editingPoi?.category ?? "custom"]?.emoji ||
+          "📍"
+        }
+        initialName={editingPoi?.name || ""}
+        initialNote={editingPoi?.note || ""}
+        onSave={(emoji, name, note) => {
+          if (editingPoiId) {
+            store.updatePoi(editingPoiId, { icon: emoji, name, note })
+            toast.success("POI opgeslagen")
+          }
+        }}
+        onDelete={
+          editingPoiId
+            ? () => {
+                store.removePoi(editingPoiId)
+                setEditingPoiId(null)
+                toast.info("POI verwijderd")
+              }
+            : undefined
+        }
+      />
     </>
   )
 }
